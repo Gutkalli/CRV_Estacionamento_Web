@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>CRV Parking Web</title>
+  <link rel="stylesheet" href="static/css/main.css">
+  <meta name="color-scheme" content="dark">
+</head>
+<body>
+  <!-- LOGIN OVERLAY -->
+  <div id="loginOverlay" class="login-overlay">
+    <div class="login-card">
+      <div class="login-head">
+        <div class="brand-icon">
+          <img src="static/img/logo_icon.png" alt="CRV">
+        </div>
+        <div>
+          <div class="login-title">CRV Parking Web</div>
+          <div class="login-sub">Acesso do operador</div>
+        </div>
+      </div>
+
+      <div id="loginError" class="alert hidden"></div>
+
+      <form id="loginForm" class="form">
+        <label>Usuário</label>
+        <input id="loginUser" autocomplete="username" placeholder="admin" required>
+
+        <label>Senha</label>
+        <input id="loginPass" type="password" autocomplete="current-password" placeholder="admin123" required>
+
+        <button class="btn btn-primary" type="submit">Entrar</button>
+      </form>
+
+      <div class="small">Padrão inicial: <b>admin</b> / <b>admin123</b></div>
+      <button id="resetDemo" class="btn btn-ghost btn-full mt8" type="button">Resetar dados (demo)</button>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <img src="static/img/logo_icon.png" alt="CRV">
+        </div>
+        <div class="brand-text">
+          <div class="brand-title">CRV Parking Web</div>
+          <div class="brand-sub">Operação + Financeiro</div>
+        </div>
+      </div>
+
+      <nav class="nav">
+        <a href="#dashboard" class="nav-item" data-route="dashboard">Dashboard</a>
+        <a href="#stays" class="nav-item" data-route="stays">Entrada / Saída</a>
+        <a href="#clients" class="nav-item" data-route="clients">Clientes</a>
+        <a href="#vehicles" class="nav-item" data-route="vehicles">Veículos</a>
+        <a href="#prices" class="nav-item" data-route="prices">Tabela de Preços</a>
+        <a href="#cash" class="nav-item" data-route="cash">Caixa</a>
+      </nav>
+
+      <button id="logoutBtn" class="btn btn-ghost btn-full logout">Sair</button>
+    </aside>
+
+    <main class="content">
+      <header class="topbar">
+        <div class="top-left">
+          <h1 id="pageTitle">Dashboard</h1>
+          <div class="hint">Usuário: <span id="currentUser">admin</span></div>
+        </div>
+        <div class="top-right">
+          <button id="exportBtn" class="btn btn-ghost">Exportar CSV</button>
+        </div>
+      </header>
+
+      <section class="page">
+
+        <!-- DASHBOARD -->
+        <section id="view-dashboard" class="view">
+          <div class="grid">
+            <div class="card">
+              <div class="card-title">No pátio agora</div>
+              <div class="big" id="dashOpen">0</div>
+              <div class="muted">Carros estacionados</div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Vagas livres</div>
+              <div class="big" id="dashFree">0</div>
+              <div class="muted">Total: <span id="dashTotal">0</span></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Faturamento (hoje)</div>
+              <div class="big">R$ <span id="dashRevenue">0,00</span></div>
+              <div class="muted">Ticket médio: R$ <span id="dashAvg">0,00</span></div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Permanência média</div>
+              <div class="big"><span id="dashAvgMin">0</span></div>
+              <div class="muted">Minutos (saídas de hoje)</div>
+            </div>
+          </div>
+
+          <div class="card mt">
+            <div class="card-title">Configurações rápidas</div>
+            <div class="row">
+              <div style="flex:1">
+                <label class="muted">Total de vagas</label>
+                <input id="totalSpotsInput" type="number" min="1" value="50">
+              </div>
+              <button id="saveSettingsBtn" class="btn">Salvar</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- ENTRADA/SAÍDA -->
+        <section id="view-stays" class="view hidden">
+          <div class="grid">
+            <div class="card">
+              <div class="card-title">Entrada rápida (por placa)</div>
+              <form id="enterForm" class="row">
+                <input id="enterPlate" placeholder="Digite a placa (ABC1D23)" required>
+                <button class="btn" type="submit">Registrar Entrada</button>
+              </form>
+              <div class="muted mt8">Se a placa não existir, o sistema cria o veículo automaticamente (demo).</div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Saída (calcular e receber)</div>
+              <form id="exitForm" class="row">
+                <input id="exitPlate" placeholder="Placa para saída (ABC1D23)" required>
+                <select id="payMethod">
+                  <option value="pix">Pix</option>
+                  <option value="dinheiro">Dinheiro</option>
+                  <option value="cartao">Cartão</option>
+                </select>
+                <button class="btn" type="submit">Registrar Saída</button>
+              </form>
+              <div id="exitResult" class="muted mt8"></div>
+            </div>
+          </div>
+
+          <div class="card mt">
+            <div class="card-title">Carros no pátio</div>
+            <div id="openStaysList" class="list"></div>
+          </div>
+        </section>
+
+        <!-- CLIENTES -->
+        <section id="view-clients" class="view hidden">
+          <div class="card">
+            <div class="card-title">Cadastrar cliente</div>
+            <form id="clientForm" class="grid-form">
+              <input id="cName" placeholder="Nome" required>
+              <input id="cPhone" placeholder="Telefone">
+              <input id="cNotes" placeholder="Observações (VIP, mensalista...)">
+              <select id="cVip">
+                <option value="0">Normal</option>
+                <option value="1">VIP</option>
+              </select>
+              <button class="btn" type="submit">Cadastrar</button>
+            </form>
+          </div>
+
+          <div class="card mt">
+            <div class="card-title">Lista</div>
+            <div id="clientsTable" class="table"></div>
+          </div>
+        </section>
+
+        <!-- VEÍCULOS -->
+        <section id="view-vehicles" class="view hidden">
+          <div class="card">
+            <div class="card-title">Cadastrar veículo</div>
+            <form id="vehicleForm" class="grid-form">
+              <input id="vPlate" placeholder="Placa (ABC1D23)" required>
+              <input id="vModel" placeholder="Modelo">
+              <input id="vColor" placeholder="Cor">
+              <select id="vClient"></select>
+              <button class="btn" type="submit">Cadastrar</button>
+            </form>
+          </div>
+
+          <div class="card mt">
+            <div class="card-title">Lista</div>
+            <div id="vehiclesTable" class="table"></div>
+          </div>
+        </section>
+
+        <!-- PREÇOS -->
+        <section id="view-prices" class="view hidden">
+          <div class="card">
+            <div class="card-title">Criar regra</div>
+            <form id="priceForm" class="grid-form">
+              <input id="pName" placeholder="Nome da regra" required>
+              <input id="pFirst" type="number" step="0.01" placeholder="Primeira hora (R$)" required>
+              <input id="pFracMin" type="number" placeholder="Fração (min)" value="15">
+              <input id="pFracVal" type="number" step="0.01" placeholder="Valor fração (R$)" value="2.00">
+              <input id="pMax" type="number" step="0.01" placeholder="Teto diário (R$) opcional">
+              <button class="btn" type="submit">Salvar</button>
+            </form>
+            <div class="muted mt8">Modelo: até 1h = primeira hora; após 1h = frações; aplica teto diário.</div>
+          </div>
+
+          <div class="card mt">
+            <div class="card-title">Regras</div>
+            <div id="pricesTable" class="table"></div>
+          </div>
+        </section>
+
+        <!-- CAIXA -->
+        <section id="view-cash" class="view hidden">
+          <div class="grid">
+            <div class="card">
+              <div class="card-title">Turno (Caixa)</div>
+              <div id="cashStatus" class="muted"></div>
+              <div class="row mt8">
+                <input id="cashInitial" type="number" step="0.01" placeholder="Valor inicial">
+                <button id="openCashBtn" class="btn" type="button">Abrir</button>
+                <button id="closeCashBtn" class="btn btn-danger" type="button">Fechar</button>
+              </div>
+              <div class="muted mt8">Pagamentos serão vinculados ao turno aberto (se existir).</div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">Total do turno</div>
+              <div class="big">R$ <span id="cashTotal">0,00</span></div>
+              <div class="muted">Somatório dos pagamentos vinculados.</div>
+            </div>
+          </div>
+
+          <div class="card mt">
+            <div class="card-title">Pagamentos do turno</div>
+            <div id="cashPaymentsTable" class="table"></div>
+          </div>
+        </section>
+
+      </section>
+    </main>
+  </div>
+
+  <script src="static/js/main.js"></script>
+</body>
+</html>
