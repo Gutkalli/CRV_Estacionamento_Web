@@ -43,7 +43,6 @@ function getOpenShift(db){
 }
 
 function pickRule(db){
-  // MVP: pega primeira ativa
   return db.priceRules.find(r => r.active) || null;
 }
 
@@ -75,6 +74,32 @@ function calcAmount(rule, entryAtISO, exitAtISO){
 /* UI helpers */
 const $ = (id) => document.getElementById(id);
 
+function setLoggedUI(isLogged){
+  const appRoot = $("appRoot");
+  const overlay = $("loginOverlay");
+
+  if (isLogged){
+    overlay.classList.add("hidden");
+    appRoot.classList.remove("hidden");
+    document.body.classList.remove("no-scroll");
+  } else {
+    overlay.classList.remove("hidden");
+    appRoot.classList.add("hidden");
+    document.body.classList.add("no-scroll");
+  }
+}
+
+function requireAuth(){
+  const u = sessionStorage.getItem("crv_user");
+  if (!u) {
+    setLoggedUI(false);
+    return false;
+  }
+  setLoggedUI(true);
+  $("currentUser").textContent = u;
+  return true;
+}
+
 function setActiveRoute(route){
   document.querySelectorAll(".nav-item").forEach(a => {
     a.classList.toggle("active", a.dataset.route === route);
@@ -97,18 +122,7 @@ function showView(route){
   $("pageTitle").textContent = titleMap[route] || "Dashboard";
 }
 
-function requireAuth(){
-  const u = sessionStorage.getItem("crv_user");
-  if (!u) {
-    $("loginOverlay").classList.remove("hidden");
-    return false;
-  }
-  $("loginOverlay").classList.add("hidden");
-  $("currentUser").textContent = u;
-  return true;
-}
-
-/* Render functions */
+/* Render */
 function renderDashboard(db){
   const open = db.stays.filter(s => !s.exitAt).length;
   const total = Number(db.settings.totalSpots || 50);
@@ -162,9 +176,7 @@ function renderOpenStays(db){
 
 function renderClients(db){
   const t = $("clientsTable");
-  t.innerHTML = `
-    <div class="tr head"><div>ID</div><div>Nome</div><div>Telefone</div><div>VIP</div><div>Ações</div></div>
-  `;
+  t.innerHTML = `<div class="tr head"><div>ID</div><div>Nome</div><div>Telefone</div><div>VIP</div><div>Ações</div></div>`;
   db.clients.slice().sort((a,b)=>b.id-a.id).forEach(c => {
     const row = document.createElement("div");
     row.className = "tr";
@@ -178,7 +190,6 @@ function renderClients(db){
     t.appendChild(row);
   });
 
-  // update client select in vehicles
   const sel = $("vClient");
   sel.innerHTML = `<option value="">Sem cliente</option>` + db.clients
     .slice().sort((a,b)=>a.name.localeCompare(b.name))
@@ -187,9 +198,7 @@ function renderClients(db){
 
 function renderVehicles(db){
   const t = $("vehiclesTable");
-  t.innerHTML = `
-    <div class="tr head"><div>ID</div><div>Placa</div><div>Modelo</div><div>Cor</div><div>Cliente</div></div>
-  `;
+  t.innerHTML = `<div class="tr head"><div>ID</div><div>Placa</div><div>Modelo</div><div>Cor</div><div>Cliente</div></div>`;
   db.vehicles.slice().sort((a,b)=>b.id-a.id).forEach(v => {
     const c = db.clients.find(cc => cc.id === v.clientId);
     const row = document.createElement("div");
@@ -207,9 +216,7 @@ function renderVehicles(db){
 
 function renderPrices(db){
   const t = $("pricesTable");
-  t.innerHTML = `
-    <div class="tr head"><div>Nome</div><div>1ª hora</div><div>Fração</div><div>Teto</div><div>Ativa</div></div>
-  `;
+  t.innerHTML = `<div class="tr head"><div>Nome</div><div>1ª hora</div><div>Fração</div><div>Teto</div><div>Ativa</div></div>`;
   db.priceRules.slice().sort((a,b)=>b.id-a.id).forEach(r => {
     const row = document.createElement("div");
     row.className = "tr";
@@ -218,11 +225,7 @@ function renderPrices(db){
       <div>R$ ${fmtMoney(r.firstHourValue)}</div>
       <div>${r.fractionMinutes} min / R$ ${fmtMoney(r.fractionValue)}</div>
       <div>${(r.dailyMax != null && r.dailyMax !== "") ? ("R$ " + fmtMoney(r.dailyMax)) : "-"}</div>
-      <div>
-        <button class="btn btn-ghost" data-toggle-rule="${r.id}">
-          ${r.active ? "Desativar" : "Ativar"}
-        </button>
-      </div>
+      <div><button class="btn btn-ghost" data-toggle-rule="${r.id}">${r.active ? "Desativar" : "Ativar"}</button></div>
     `;
     t.appendChild(row);
   });
@@ -230,11 +233,9 @@ function renderPrices(db){
 
 function renderCash(db){
   const shift = getOpenShift(db);
-  if (!shift){
-    $("cashStatus").textContent = "Status: FECHADO (nenhum turno aberto)";
-  } else {
-    $("cashStatus").textContent = `Status: ABERTO desde ${new Date(shift.openedAt).toLocaleString("pt-BR")}`;
-  }
+  $("cashStatus").textContent = shift
+    ? `Status: ABERTO desde ${new Date(shift.openedAt).toLocaleString("pt-BR")}`
+    : "Status: FECHADO (nenhum turno aberto)";
 
   const pays = shift
     ? db.payments.filter(p => p.cashShiftId === shift.id).slice().sort((a,b)=>b.paidAt.localeCompare(a.paidAt))
@@ -284,9 +285,9 @@ function route(){
   renderAll();
 }
 
-/* Events */
 window.addEventListener("hashchange", route);
 
+/* Login */
 $("loginForm").addEventListener("submit", (e)=>{
   e.preventDefault();
   const db = loadDB();
@@ -302,22 +303,28 @@ $("loginForm").addEventListener("submit", (e)=>{
   }
   err.classList.add("hidden");
   sessionStorage.setItem("crv_user", user);
+
+  // depois do login, mostra app e renderiza
+  setLoggedUI(true);
   route();
 });
 
+/* Logout */
 $("logoutBtn").addEventListener("click", ()=>{
   sessionStorage.removeItem("crv_user");
-  $("loginOverlay").classList.remove("hidden");
+  setLoggedUI(false);
 });
 
+/* Reset demo */
 $("resetDemo").addEventListener("click", ()=>{
   localStorage.removeItem(LS_KEY);
   seedDB();
   sessionStorage.removeItem("crv_user");
   location.hash = "#dashboard";
-  $("loginOverlay").classList.remove("hidden");
+  setLoggedUI(false);
 });
 
+/* Settings */
 $("saveSettingsBtn").addEventListener("click", ()=>{
   const db = loadDB();
   const v = Number($("totalSpotsInput").value || 50);
@@ -341,11 +348,13 @@ $("enterForm").addEventListener("submit", (e)=>{
   const open = db.stays.find(s=>s.vehicleId===vehicle.id && !s.exitAt);
   if (open){
     $("enterPlate").value = "";
+    saveDB(db);
     renderOpenStays(db);
+    renderDashboard(db);
     return;
   }
 
-  const stay = {
+  db.stays.push({
     id: (db.stays.at(-1)?.id || 0) + 1,
     vehicleId: vehicle.id,
     entryAt: nowISO(),
@@ -353,10 +362,9 @@ $("enterForm").addEventListener("submit", (e)=>{
     minutes: null,
     amount: 0,
     ruleDesc: null
-  };
-  db.stays.push(stay);
-  saveDB(db);
+  });
 
+  saveDB(db);
   $("enterPlate").value = "";
   renderOpenStays(db);
   renderDashboard(db);
@@ -370,21 +378,13 @@ $("exitForm").addEventListener("submit", (e)=>{
   const method = $("payMethod").value;
 
   const v = db.vehicles.find(vv=>vv.plate===plate);
-  if (!v){
-    $("exitResult").textContent = "Placa não encontrada.";
-    return;
-  }
+  if (!v){ $("exitResult").textContent = "Placa não encontrada."; return; }
+
   const stay = db.stays.find(s=>s.vehicleId===v.id && !s.exitAt);
-  if (!stay){
-    $("exitResult").textContent = "Não existe permanência aberta para essa placa.";
-    return;
-  }
+  if (!stay){ $("exitResult").textContent = "Não existe permanência aberta para essa placa."; return; }
 
   const rule = pickRule(db);
-  if (!rule){
-    $("exitResult").textContent = "Nenhuma tabela de preço ativa.";
-    return;
-  }
+  if (!rule){ $("exitResult").textContent = "Nenhuma tabela de preço ativa."; return; }
 
   stay.exitAt = nowISO();
   const res = calcAmount(rule, stay.entryAt, stay.exitAt);
@@ -393,17 +393,16 @@ $("exitForm").addEventListener("submit", (e)=>{
   stay.ruleDesc = res.desc;
 
   const shift = getOpenShift(db);
-  const payment = {
+  db.payments.push({
     id: (db.payments.at(-1)?.id || 0) + 1,
     stayId: stay.id,
     paidAt: nowISO(),
     method,
     amount: res.amount,
     cashShiftId: shift ? shift.id : null
-  };
-  db.payments.push(payment);
-  saveDB(db);
+  });
 
+  saveDB(db);
   $("exitResult").textContent = `Saída registrada. Total: R$ ${fmtMoney(res.amount)} — ${res.desc}`;
   $("exitPlate").value = "";
 
@@ -416,19 +415,15 @@ $("exitForm").addEventListener("submit", (e)=>{
 $("clientForm").addEventListener("submit", (e)=>{
   e.preventDefault();
   const db = loadDB();
-  const c = {
+  db.clients.push({
     id: (db.clients.at(-1)?.id || 0) + 1,
     name: $("cName").value.trim(),
     phone: $("cPhone").value.trim(),
     notes: $("cNotes").value.trim(),
     isVip: $("cVip").value === "1"
-  };
-  db.clients.push(c);
+  });
   saveDB(db);
-  $("cName").value = "";
-  $("cPhone").value = "";
-  $("cNotes").value = "";
-  $("cVip").value = "0";
+  $("cName").value = ""; $("cPhone").value = ""; $("cNotes").value = ""; $("cVip").value = "0";
   renderClients(db);
 });
 
@@ -439,7 +434,6 @@ document.addEventListener("click", (e)=>{
   if (del){
     const id = Number(del);
     db.clients = db.clients.filter(c=>c.id!==id);
-    // desvincula veículos
     db.vehicles.forEach(v => { if (v.clientId === id) v.clientId = null; });
     saveDB(db);
     renderClients(db);
@@ -464,9 +458,7 @@ $("vehicleForm").addEventListener("submit", (e)=>{
   const db = loadDB();
   const plate = normalizePlate($("vPlate").value);
   if (!plate) return;
-
-  const exists = db.vehicles.some(v=>v.plate===plate);
-  if (exists) return;
+  if (db.vehicles.some(v=>v.plate===plate)) return;
 
   db.vehicles.push({
     id: (db.vehicles.at(-1)?.id || 0) + 1,
@@ -475,18 +467,14 @@ $("vehicleForm").addEventListener("submit", (e)=>{
     color: $("vColor").value.trim(),
     clientId: $("vClient").value ? Number($("vClient").value) : null
   });
+
   saveDB(db);
-
-  $("vPlate").value = "";
-  $("vModel").value = "";
-  $("vColor").value = "";
-  $("vClient").value = "";
-
+  $("vPlate").value=""; $("vModel").value=""; $("vColor").value=""; $("vClient").value="";
   renderVehicles(db);
   renderClients(db);
 });
 
-/* Prices */
+/* Preços */
 $("priceForm").addEventListener("submit", (e)=>{
   e.preventDefault();
   const db = loadDB();
@@ -500,13 +488,7 @@ $("priceForm").addEventListener("submit", (e)=>{
     dailyMax: $("pMax").value === "" ? null : Number($("pMax").value)
   });
   saveDB(db);
-
-  $("pName").value = "";
-  $("pFirst").value = "";
-  $("pFracMin").value = "15";
-  $("pFracVal").value = "2.00";
-  $("pMax").value = "";
-
+  $("pName").value=""; $("pFirst").value=""; $("pFracMin").value="15"; $("pFracVal").value="2.00"; $("pMax").value="";
   renderPrices(db);
 });
 
@@ -514,7 +496,6 @@ $("priceForm").addEventListener("submit", (e)=>{
 $("openCashBtn").addEventListener("click", ()=>{
   const db = loadDB();
   if (getOpenShift(db)) return;
-
   db.cashShifts.push({
     id: (db.cashShifts.at(-1)?.id || 0) + 1,
     openedAt: nowISO(),
@@ -535,12 +516,10 @@ $("closeCashBtn").addEventListener("click", ()=>{
   renderCash(db);
 });
 
-/* Export CSV (pagamentos + stays) */
+/* Export CSV */
 $("exportBtn").addEventListener("click", ()=>{
   const db = loadDB();
-  const rows = [
-    ["paidAt","method","amount","plate","entryAt","exitAt","ruleDesc"].join(";")
-  ];
+  const rows = [["paidAt","method","amount","plate","entryAt","exitAt","ruleDesc"].join(";")];
   db.payments.forEach(p=>{
     const s = db.stays.find(x=>x.id===p.stayId);
     const v = db.vehicles.find(x=>x.id===s?.vehicleId);
@@ -564,10 +543,7 @@ $("exportBtn").addEventListener("click", ()=>{
 
 /* init */
 (function init(){
-  // seed if empty
   loadDB();
-
-  // default route
   if (!location.hash) location.hash = "#dashboard";
   route();
 })();
