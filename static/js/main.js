@@ -1,10 +1,9 @@
-/* CRV Parking Web - GitHub Pages (LocalStorage) */
-
 const LS_KEY = "crv_parking_demo_v1";
 
 const fmtMoney = (n) => (Number(n || 0)).toFixed(2).replace(".", ",");
 const nowISO = () => new Date().toISOString();
 const todayKey = () => new Date().toISOString().slice(0,10);
+const $ = (id) => document.getElementById(id);
 
 function loadDB(){
   const raw = localStorage.getItem(LS_KEY);
@@ -37,15 +36,12 @@ function seedDB(){
 function normalizePlate(p){
   return (p || "").trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
-
 function getOpenShift(db){
   return db.cashShifts.find(s => !s.closedAt) || null;
 }
-
 function pickRule(db){
   return db.priceRules.find(r => r.active) || null;
 }
-
 function calcAmount(rule, entryAtISO, exitAtISO){
   const entry = new Date(entryAtISO);
   const exit = new Date(exitAtISO);
@@ -71,27 +67,37 @@ function calcAmount(rule, entryAtISO, exitAtISO){
   return { amount: Number(amount.toFixed(2)), desc, minutes: diffMin };
 }
 
-/* UI helpers */
-const $ = (id) => document.getElementById(id);
-
+/* === Login state === */
 function setLoggedUI(isLogged){
   const appRoot = $("appRoot");
   const overlay = $("loginOverlay");
-
-  if (isLogged){
-    overlay.classList.add("hidden");
-    appRoot.classList.remove("hidden");
-    document.body.classList.remove("no-scroll");
-  } else {
-    overlay.classList.remove("hidden");
-    appRoot.classList.add("hidden");
-    document.body.classList.add("no-scroll");
-  }
+  appRoot.hidden = !isLogged;
+  overlay.classList.toggle("hidden", isLogged);
+  document.body.classList.toggle("no-scroll", !isLogged);
 }
 
+/* === Drawer mobile === */
+function openDrawer(){
+  const sb = $("sidebar");
+  const bd = $("drawerBackdrop");
+  if (!sb || !bd) return;
+  sb.classList.add("open");
+  bd.classList.remove("hidden");
+  bd.setAttribute("aria-hidden", "false");
+}
+function closeDrawer(){
+  const sb = $("sidebar");
+  const bd = $("drawerBackdrop");
+  if (!sb || !bd) return;
+  sb.classList.remove("open");
+  bd.classList.add("hidden");
+  bd.setAttribute("aria-hidden", "true");
+}
+
+/* Router + UI */
 function requireAuth(){
   const u = sessionStorage.getItem("crv_user");
-  if (!u) {
+  if (!u){
     setLoggedUI(false);
     return false;
   }
@@ -99,13 +105,11 @@ function requireAuth(){
   $("currentUser").textContent = u;
   return true;
 }
-
 function setActiveRoute(route){
   document.querySelectorAll(".nav-item").forEach(a => {
     a.classList.toggle("active", a.dataset.route === route);
   });
 }
-
 function showView(route){
   document.querySelectorAll(".view").forEach(v => v.classList.add("hidden"));
   const view = $(`view-${route}`);
@@ -122,7 +126,6 @@ function showView(route){
   $("pageTitle").textContent = titleMap[route] || "Dashboard";
 }
 
-/* Render */
 function renderDashboard(db){
   const open = db.stays.filter(s => !s.exitAt).length;
   const total = Number(db.settings.totalSpots || 50);
@@ -152,12 +155,10 @@ function renderOpenStays(db){
   const list = $("openStaysList");
   list.innerHTML = "";
   const open = db.stays.filter(s => !s.exitAt).sort((a,b) => (b.entryAt.localeCompare(a.entryAt)));
-
   if (!open.length){
     list.innerHTML = `<div class="muted">Nenhum carro no pátio.</div>`;
     return;
   }
-
   open.forEach(s => {
     const v = db.vehicles.find(vv => vv.id === s.vehicleId);
     const plate = v?.plate || "???";
@@ -165,11 +166,7 @@ function renderOpenStays(db){
     const item = document.createElement("div");
     item.className = "tr";
     item.style.gridTemplateColumns = "1fr 2fr 1fr";
-    item.innerHTML = `
-      <div><b>${plate}</b></div>
-      <div>${entry}</div>
-      <div class="muted">Aberto</div>
-    `;
+    item.innerHTML = `<div><b>${plate}</b></div><div>${entry}</div><div class="muted">Aberto</div>`;
     list.appendChild(item);
   });
 }
@@ -181,12 +178,9 @@ function renderClients(db){
     const row = document.createElement("div");
     row.className = "tr";
     row.innerHTML = `
-      <div>${c.id}</div>
-      <div>${c.name}</div>
-      <div>${c.phone || "-"}</div>
+      <div>${c.id}</div><div>${c.name}</div><div>${c.phone || "-"}</div>
       <div>${c.isVip ? "Sim" : "Não"}</div>
-      <div><button class="btn btn-danger" data-del-client="${c.id}">Excluir</button></div>
-    `;
+      <div><button class="btn btn-danger" data-del-client="${c.id}">Excluir</button></div>`;
     t.appendChild(row);
   });
 
@@ -203,13 +197,7 @@ function renderVehicles(db){
     const c = db.clients.find(cc => cc.id === v.clientId);
     const row = document.createElement("div");
     row.className = "tr";
-    row.innerHTML = `
-      <div>${v.id}</div>
-      <div><b>${v.plate}</b></div>
-      <div>${v.model || "-"}</div>
-      <div>${v.color || "-"}</div>
-      <div>${c ? c.name : "-"}</div>
-    `;
+    row.innerHTML = `<div>${v.id}</div><div><b>${v.plate}</b></div><div>${v.model || "-"}</div><div>${v.color || "-"}</div><div>${c ? c.name : "-"}</div>`;
     t.appendChild(row);
   });
 }
@@ -225,8 +213,7 @@ function renderPrices(db){
       <div>R$ ${fmtMoney(r.firstHourValue)}</div>
       <div>${r.fractionMinutes} min / R$ ${fmtMoney(r.fractionValue)}</div>
       <div>${(r.dailyMax != null && r.dailyMax !== "") ? ("R$ " + fmtMoney(r.dailyMax)) : "-"}</div>
-      <div><button class="btn btn-ghost" data-toggle-rule="${r.id}">${r.active ? "Desativar" : "Ativar"}</button></div>
-    `;
+      <div><button class="btn btn-ghost" data-toggle-rule="${r.id}">${r.active ? "Desativar" : "Ativar"}</button></div>`;
     t.appendChild(row);
   });
 }
@@ -237,10 +224,7 @@ function renderCash(db){
     ? `Status: ABERTO desde ${new Date(shift.openedAt).toLocaleString("pt-BR")}`
     : "Status: FECHADO (nenhum turno aberto)";
 
-  const pays = shift
-    ? db.payments.filter(p => p.cashShiftId === shift.id).slice().sort((a,b)=>b.paidAt.localeCompare(a.paidAt))
-    : [];
-
+  const pays = shift ? db.payments.filter(p => p.cashShiftId === shift.id).slice().sort((a,b)=>b.paidAt.localeCompare(a.paidAt)) : [];
   const total = pays.reduce((acc,p)=>acc+Number(p.amount||0),0);
   $("cashTotal").textContent = fmtMoney(total);
 
@@ -251,13 +235,7 @@ function renderCash(db){
     const v = db.vehicles.find(vv=>vv.id===stay?.vehicleId);
     const row = document.createElement("div");
     row.className="tr";
-    row.innerHTML = `
-      <div>${new Date(p.paidAt).toLocaleString("pt-BR")}</div>
-      <div>${p.method}</div>
-      <div>R$ ${fmtMoney(p.amount)}</div>
-      <div>${v?.plate || "-"}</div>
-      <div class="muted">${stay?.ruleDesc || "-"}</div>
-    `;
+    row.innerHTML = `<div>${new Date(p.paidAt).toLocaleString("pt-BR")}</div><div>${p.method}</div><div>R$ ${fmtMoney(p.amount)}</div><div>${v?.plate || "-"}</div><div class="muted">${stay?.ruleDesc || "-"}</div>`;
     t.appendChild(row);
   });
 }
@@ -272,7 +250,6 @@ function renderAll(){
   renderCash(db);
 }
 
-/* Router */
 function route(){
   if (!requireAuth()) return;
 
@@ -283,11 +260,14 @@ function route(){
   setActiveRoute(routeName);
   showView(routeName);
   renderAll();
+
+  // ao navegar no mobile, fecha drawer
+  closeDrawer();
 }
 
 window.addEventListener("hashchange", route);
 
-/* Login */
+/* Eventos principais */
 $("loginForm").addEventListener("submit", (e)=>{
   e.preventDefault();
   const db = loadDB();
@@ -303,26 +283,35 @@ $("loginForm").addEventListener("submit", (e)=>{
   }
   err.classList.add("hidden");
   sessionStorage.setItem("crv_user", user);
-
-  // depois do login, mostra app e renderiza
   setLoggedUI(true);
   route();
 });
 
-/* Logout */
 $("logoutBtn").addEventListener("click", ()=>{
   sessionStorage.removeItem("crv_user");
   setLoggedUI(false);
+  closeDrawer();
 });
 
-/* Reset demo */
 $("resetDemo").addEventListener("click", ()=>{
   localStorage.removeItem(LS_KEY);
   seedDB();
   sessionStorage.removeItem("crv_user");
   location.hash = "#dashboard";
   setLoggedUI(false);
+  closeDrawer();
 });
+
+/* Menu drawer */
+const menuBtn = $("menuBtn");
+if (menuBtn){
+  menuBtn.addEventListener("click", ()=>{
+    const sb = $("sidebar");
+    if (sb.classList.contains("open")) closeDrawer();
+    else openDrawer();
+  });
+}
+$("drawerBackdrop").addEventListener("click", closeDrawer);
 
 /* Settings */
 $("saveSettingsBtn").addEventListener("click", ()=>{
@@ -345,24 +334,19 @@ $("enterForm").addEventListener("submit", (e)=>{
     vehicle = { id: (db.vehicles.at(-1)?.id || 0) + 1, plate, model:"", color:"", clientId:null };
     db.vehicles.push(vehicle);
   }
-  const open = db.stays.find(s=>s.vehicleId===vehicle.id && !s.exitAt);
-  if (open){
-    $("enterPlate").value = "";
-    saveDB(db);
-    renderOpenStays(db);
-    renderDashboard(db);
-    return;
-  }
 
-  db.stays.push({
-    id: (db.stays.at(-1)?.id || 0) + 1,
-    vehicleId: vehicle.id,
-    entryAt: nowISO(),
-    exitAt: null,
-    minutes: null,
-    amount: 0,
-    ruleDesc: null
-  });
+  const openStay = db.stays.find(s=>s.vehicleId===vehicle.id && !s.exitAt);
+  if (!openStay){
+    db.stays.push({
+      id: (db.stays.at(-1)?.id || 0) + 1,
+      vehicleId: vehicle.id,
+      entryAt: nowISO(),
+      exitAt: null,
+      minutes: null,
+      amount: 0,
+      ruleDesc: null
+    });
+  }
 
   saveDB(db);
   $("enterPlate").value = "";
@@ -423,10 +407,11 @@ $("clientForm").addEventListener("submit", (e)=>{
     isVip: $("cVip").value === "1"
   });
   saveDB(db);
-  $("cName").value = ""; $("cPhone").value = ""; $("cNotes").value = ""; $("cVip").value = "0";
+  $("cName").value=""; $("cPhone").value=""; $("cNotes").value=""; $("cVip").value="0";
   renderClients(db);
 });
 
+/* Clique ações (excluir cliente / toggle regra) */
 document.addEventListener("click", (e)=>{
   const db = loadDB();
 
@@ -452,98 +437,10 @@ document.addEventListener("click", (e)=>{
   }
 });
 
-/* Veículos */
-$("vehicleForm").addEventListener("submit", (e)=>{
-  e.preventDefault();
-  const db = loadDB();
-  const plate = normalizePlate($("vPlate").value);
-  if (!plate) return;
-  if (db.vehicles.some(v=>v.plate===plate)) return;
-
-  db.vehicles.push({
-    id: (db.vehicles.at(-1)?.id || 0) + 1,
-    plate,
-    model: $("vModel").value.trim(),
-    color: $("vColor").value.trim(),
-    clientId: $("vClient").value ? Number($("vClient").value) : null
-  });
-
-  saveDB(db);
-  $("vPlate").value=""; $("vModel").value=""; $("vColor").value=""; $("vClient").value="";
-  renderVehicles(db);
-  renderClients(db);
-});
-
-/* Preços */
-$("priceForm").addEventListener("submit", (e)=>{
-  e.preventDefault();
-  const db = loadDB();
-  db.priceRules.push({
-    id: (db.priceRules.at(-1)?.id || 0) + 1,
-    name: $("pName").value.trim(),
-    active: true,
-    firstHourValue: Number($("pFirst").value || 0),
-    fractionMinutes: Number($("pFracMin").value || 15),
-    fractionValue: Number($("pFracVal").value || 0),
-    dailyMax: $("pMax").value === "" ? null : Number($("pMax").value)
-  });
-  saveDB(db);
-  $("pName").value=""; $("pFirst").value=""; $("pFracMin").value="15"; $("pFracVal").value="2.00"; $("pMax").value="";
-  renderPrices(db);
-});
-
-/* Caixa */
-$("openCashBtn").addEventListener("click", ()=>{
-  const db = loadDB();
-  if (getOpenShift(db)) return;
-  db.cashShifts.push({
-    id: (db.cashShifts.at(-1)?.id || 0) + 1,
-    openedAt: nowISO(),
-    closedAt: null,
-    initialAmount: Number($("cashInitial").value || 0)
-  });
-  saveDB(db);
-  $("cashInitial").value = "";
-  renderCash(db);
-});
-
-$("closeCashBtn").addEventListener("click", ()=>{
-  const db = loadDB();
-  const shift = getOpenShift(db);
-  if (!shift) return;
-  shift.closedAt = nowISO();
-  saveDB(db);
-  renderCash(db);
-});
-
-/* Export CSV */
-$("exportBtn").addEventListener("click", ()=>{
-  const db = loadDB();
-  const rows = [["paidAt","method","amount","plate","entryAt","exitAt","ruleDesc"].join(";")];
-  db.payments.forEach(p=>{
-    const s = db.stays.find(x=>x.id===p.stayId);
-    const v = db.vehicles.find(x=>x.id===s?.vehicleId);
-    rows.push([
-      p.paidAt, p.method, p.amount,
-      v?.plate || "",
-      s?.entryAt || "",
-      s?.exitAt || "",
-      (s?.ruleDesc || "").replaceAll(";", ",")
-    ].join(";"));
-  });
-
-  const blob = new Blob([rows.join("\n")], {type:"text/csv;charset=utf-8"});
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "crv_parking_export.csv";
-  a.click();
-  URL.revokeObjectURL(url);
-});
-
 /* init */
 (function init(){
   loadDB();
   if (!location.hash) location.hash = "#dashboard";
+  setLoggedUI(false);
   route();
 })();

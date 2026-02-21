@@ -1,11 +1,9 @@
 :root{
-  --bg:#0b1020;
   --text:#e8ecff;
   --muted:#aab3e6;
   --line:rgba(255,255,255,.10);
   --accent:#6aa6ff;
   --danger:#ff5a5f;
-
   --radius:18px;
 
   /* watermark */
@@ -19,6 +17,10 @@
   --card-alpha:0.55;
   --input-alpha:0.12;
   --row-alpha:0.04;
+
+  /* login glass */
+  --login-card-alpha:0.34;
+  --login-input-alpha:0.08;
 }
 
 *{box-sizing:border-box}
@@ -29,7 +31,7 @@ body{
   background:linear-gradient(180deg,#070b16,#0b1020);
 }
 
-/* Watermark global (GitHub Pages friendly: path relativo) */
+/* Watermark global */
 body::before{
   content:"";
   position:fixed;
@@ -54,6 +56,14 @@ body::after{
     radial-gradient(circle at 20% 20%, rgba(106,166,255,.05), rgba(0,0,0,0) 45%);
 }
 
+.hidden{display:none !important;}
+body.no-scroll{overflow:hidden;}
+.mt8{margin-top:8px}
+.mt{margin-top:14px}
+.muted{color:var(--muted);font-size:12px}
+.big{font-size:34px;font-weight:900;letter-spacing:.5px}
+.card-title{color:var(--muted);font-size:13px;margin-bottom:8px}
+
 .app{
   position:relative;
   z-index:1;
@@ -69,19 +79,16 @@ body::after{
   align-items:center;
   justify-content:center;
   padding:18px;
-  z-index:10;
+  z-index:50;
 }
-.hidden{display:none !important;}
-body.no-scroll{overflow:hidden;}
-
 .login-card{
   width:min(520px,92vw);
-  background:rgba(17,26,51,.45);
+  background:rgba(17,26,51,var(--login-card-alpha));
   border:1px solid rgba(255,255,255,.14);
   border-radius:24px;
   padding:18px;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
   box-shadow:0 18px 55px rgba(0,0,0,.30);
 }
 .login-head{display:flex;gap:12px;align-items:center;margin-bottom:10px}
@@ -90,7 +97,17 @@ body.no-scroll{overflow:hidden;}
 .form{display:flex;flex-direction:column;gap:10px}
 .small{color:var(--muted);font-size:12px;margin-top:12px}
 
-/* Sidebar (igual sua foto 3) */
+/* Backdrop do drawer */
+.drawer-backdrop{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.50);
+  z-index:40;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+/* Sidebar (desktop) */
 .sidebar{
   flex:0 0 320px;
   width:320px;
@@ -153,6 +170,7 @@ body.no-scroll{overflow:hidden;}
   padding:18px 18px 40px;
 }
 
+/* Topbar + botão menu */
 .topbar{
   display:flex;
   justify-content:space-between;
@@ -160,15 +178,31 @@ body.no-scroll{overflow:hidden;}
   gap:12px;
   margin-bottom:14px;
 }
+.top-left{display:flex;gap:12px;align-items:flex-start}
+.top-right{display:flex;gap:10px;align-items:center}
+
 h1{margin:0;font-size:24px}
 .hint{color:var(--muted);font-size:12px;margin-top:4px}
 .page{max-width:1100px}
 
-.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
-@media (max-width:980px){
-  .sidebar{flex:0 0 280px;width:280px;min-width:280px;max-width:280px;}
-  .grid{grid-template-columns:1fr}
+/* Botão “hamburger” */
+.icon-btn{
+  width:46px;
+  height:46px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.06);
+  color:var(--text);
+  font-size:18px;
+  cursor:pointer;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
+.icon-btn:hover{border-color:rgba(106,166,255,.35)}
+.mobile-only{display:none}
+
+/* Cards / Forms / Tables */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
 
 .card{
   background:rgba(17,26,51,var(--card-alpha));
@@ -179,13 +213,8 @@ h1{margin:0;font-size:24px}
   -webkit-backdrop-filter: blur(12px);
   box-shadow:0 12px 40px rgba(0,0,0,.26);
 }
-.card-title{color:var(--muted);font-size:13px;margin-bottom:8px}
-.big{font-size:34px;font-weight:900;letter-spacing:.5px}
-.muted{color:var(--muted);font-size:12px}
-.mt{margin-top:14px}
-.mt8{margin-top:8px}
 
-.row{display:flex;gap:10px;align-items:center}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .sep{border:none;border-top:1px solid var(--line);margin:12px 0}
 
 input,select{
@@ -198,6 +227,9 @@ input,select{
   outline:none;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+}
+#loginOverlay input, #loginOverlay select{
+  background:rgba(0,0,0,var(--login-input-alpha));
 }
 input::placeholder{color:rgba(170,179,230,.70)}
 input:focus, select:focus{
@@ -226,7 +258,6 @@ input:focus, select:focus{
   grid-template-columns:repeat(5,minmax(0,1fr));
   gap:10px;
 }
-@media (max-width:980px){.grid-form{grid-template-columns:1fr}}
 
 .table{display:flex;flex-direction:column;gap:8px;margin-top:10px}
 .tr{
@@ -245,9 +276,71 @@ input:focus, select:focus{
   font-size:12px;
   font-weight:800;
 }
-@media (max-width:980px){.tr{grid-template-columns:1fr}}
 
 .list{display:flex;flex-direction:column;gap:10px;margin-top:10px}
-
-/* views */
 .view{display:block}
+
+/* ALERT */
+.alert{
+  background:rgba(255,90,95,.14);
+  border:1px solid rgba(255,90,95,.35);
+  padding:10px 12px;
+  border-radius:14px;
+  margin-bottom:10px;
+}
+
+/* ===== MOBILE / TABLET ===== */
+@media (max-width: 980px){
+  /* Menu vira drawer */
+  .mobile-only{display:inline-flex}
+
+  .sidebar{
+    position:fixed;
+    left:0;
+    top:0;
+    height:100vh;
+    width:min(86vw, 360px);
+    min-width:0;
+    max-width:none;
+    z-index:45;
+    transform:translateX(-110%);
+    transition: transform .18s ease;
+    box-shadow: 18px 0 50px rgba(0,0,0,.40);
+  }
+  .sidebar.open{
+    transform:translateX(0);
+  }
+
+  /* Conteúdo ocupa tudo */
+  .content{
+    padding:14px 14px 28px;
+  }
+
+  /* Topbar mais compacto */
+  h1{font-size:20px}
+  .topbar{align-items:center}
+  .top-left{align-items:center}
+  .top-right .btn{padding:10px 12px}
+
+  /* Grid 1 coluna */
+  .grid{grid-template-columns:1fr}
+
+  /* Form de cadastro 1 coluna */
+  .grid-form{grid-template-columns:1fr}
+
+  /* Tabelas viram “cards” empilhados */
+  .tr.head{display:none}
+  .tr{
+    grid-template-columns:1fr;
+    gap:6px;
+  }
+}
+
+/* ===== TELAS MUITO PEQUENAS ===== */
+@media (max-width: 420px){
+  .login-card{padding:14px}
+  .login-title{font-size:20px}
+  .brand-title{font-size:18px}
+  .nav-item{height:54px;border-radius:20px}
+  .btn-full{height:54px;border-radius:20px}
+}

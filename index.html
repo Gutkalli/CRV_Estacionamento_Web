@@ -4,12 +4,14 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>CRV Parking Web</title>
-  <link rel="stylesheet" href="static/css/main.css">
+
+  <!-- Cache buster (troque o número quando alterar css) -->
+  <link rel="stylesheet" href="static/css/main.css?v=20260220_mobile1">
   <meta name="color-scheme" content="dark">
 </head>
 
 <body class="no-scroll">
-  <!-- LOGIN OVERLAY (tela separada) -->
+  <!-- LOGIN (tela separada) -->
   <div id="loginOverlay" class="login-overlay">
     <div class="login-card">
       <div class="login-head">
@@ -39,9 +41,12 @@
     </div>
   </div>
 
-  <!-- APP (fica escondido até logar) -->
-  <div id="appRoot" class="app hidden">
-    <aside class="sidebar">
+  <!-- Backdrop do menu mobile -->
+  <div id="drawerBackdrop" class="drawer-backdrop hidden" aria-hidden="true"></div>
+
+  <!-- APP (começa escondido até logar) -->
+  <div id="appRoot" class="app" hidden>
+    <aside id="sidebar" class="sidebar">
       <div class="brand">
         <div class="brand-icon">
           <img src="static/img/logo_icon.png" alt="CRV">
@@ -67,16 +72,21 @@
     <main class="content">
       <header class="topbar">
         <div class="top-left">
-          <h1 id="pageTitle">Dashboard</h1>
-          <div class="hint">Usuário: <span id="currentUser">admin</span></div>
+          <!-- Botão menu (mobile) -->
+          <button id="menuBtn" class="icon-btn mobile-only" type="button" aria-label="Abrir menu">☰</button>
+
+          <div>
+            <h1 id="pageTitle">Dashboard</h1>
+            <div class="hint">Usuário: <span id="currentUser">admin</span></div>
+          </div>
         </div>
+
         <div class="top-right">
           <button id="exportBtn" class="btn btn-ghost">Exportar CSV</button>
         </div>
       </header>
 
       <section class="page">
-
         <!-- DASHBOARD -->
         <section id="view-dashboard" class="view">
           <div class="grid">
@@ -112,7 +122,7 @@
                 <label class="muted">Total de vagas</label>
                 <input id="totalSpotsInput" type="number" min="1" value="50">
               </div>
-              <button id="saveSettingsBtn" class="btn">Salvar</button>
+              <button id="saveSettingsBtn" class="btn" type="button">Salvar</button>
             </div>
           </div>
         </section>
@@ -203,7 +213,6 @@
               <input id="pMax" type="number" step="0.01" placeholder="Teto diário (R$) opcional">
               <button class="btn" type="submit">Salvar</button>
             </form>
-            <div class="muted mt8">Modelo: até 1h = primeira hora; após 1h = frações; aplica teto diário.</div>
           </div>
 
           <div class="card mt">
@@ -223,13 +232,11 @@
                 <button id="openCashBtn" class="btn" type="button">Abrir</button>
                 <button id="closeCashBtn" class="btn btn-danger" type="button">Fechar</button>
               </div>
-              <div class="muted mt8">Pagamentos serão vinculados ao turno aberto (se existir).</div>
             </div>
 
             <div class="card">
               <div class="card-title">Total do turno</div>
               <div class="big">R$ <span id="cashTotal">0,00</span></div>
-              <div class="muted">Somatório dos pagamentos vinculados.</div>
             </div>
           </div>
 
@@ -243,6 +250,7 @@
     </main>
   </div>
 
-  <script src="static/js/main.js"></script>
+  <!-- Cache buster (troque o número quando alterar js) -->
+  <script src="static/js/main.js?v=20260220_mobile1"></script>
 </body>
 </html>
