@@ -7,8 +7,9 @@
   <link rel="stylesheet" href="static/css/main.css">
   <meta name="color-scheme" content="dark">
 </head>
-<body>
-  <!-- LOGIN OVERLAY -->
+
+<body class="no-scroll">
+  <!-- LOGIN OVERLAY (tela separada) -->
   <div id="loginOverlay" class="login-overlay">
     <div class="login-card">
       <div class="login-head">
@@ -38,8 +39,8 @@
     </div>
   </div>
 
-  <!-- APP -->
-  <div class="app">
+  <!-- APP (fica escondido até logar) -->
+  <div id="appRoot" class="app hidden">
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-icon">
